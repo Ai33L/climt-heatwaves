@@ -1,0 +1,36 @@
+Bootstrap: docker
+From: python:3.6.15
+
+%post
+	apt-get update
+	
+	apt-get install -y vim
+	apt-get install -y git
+
+	apt-get install -y gcc g++
+	apt-get install -y gfortran-9
+	apt-get install -y libopenmpi-dev
+	apt-get install -y libfftw3-dev
+	apt-get install -y liblapack-dev
+	
+	yes | pip install numba
+	yes | pip install matplotlib
+
+	cd /opt/
+	git clone https://github.com/Ai33L/climt.git -b rare-event-code
+	cd climt
+	pip install -r requirements_dev.txt
+	python setup.py install
+	
+	cd /
+#Will contin the instructions to setup image
+
+%runscript
+	/bin/bash
+
+%labels
+	Author SCJ, Abel
+	Version v1.1
+
+%help
+	This is a useless help text

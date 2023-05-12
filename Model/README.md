@@ -1,8 +1,6 @@
-# Project log
+# Model
 
-## Model
-
- A baseline model was designed on CliMT. The fork of CliMT used can be found at <https://github.com/Ai33L/climt/tree/heatwave_sampling>
+The baseline model was designed on CliMT. The fork of CliMT used can be found at <https://github.com/Ai33L/climt/tree/heatwave_sampling>
 
 ### Model description
 
@@ -37,9 +35,8 @@ These are saved before the model begins in the *common* directory.
 
 Model data - 
 
-* air_pressure
 * air_temperature
-* boundary_layer_height
+* air_pressure
 * specific_humidity
 * northward_wind
 * eastward_wind 
@@ -53,10 +50,3 @@ Model data -
 * surface_downwelling_longwave_flux_in_air
 
 The daily averages of these are saved along the time axis in nested directories in xarray dataset format.
-
-## Direct run
-
-### Climatology and initialisation
-The model is spun up for 3 years. The model is then run for a period of 30 years, with model states saved every 10 days. 
-
-The 30 year climatology is computed from this run. The model states saved will be used for the GKLT algorithm later.
