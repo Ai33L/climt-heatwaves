@@ -91,10 +91,10 @@ def plot_function(fig, state):
             state['downwelling_longwave_flux_in_air'][-1] -
             state['upwelling_shortwave_flux_in_air'][-1] -
             state['upwelling_longwave_flux_in_air'][-1])
-    flux=(net_heat_flux*np.cos(state['latitude'].values[:])).mean()
+    flux=(net_heat_flux*np.cos(np.radians(state['latitude'].values[:]))).mean()/(np.cos(np.radians(state['latitude'].values[:])).mean())
+    ax.set_title('Net flux at TOA : '+ str(round(flux.item(),2))+' W/m^2', fontsize=10)
     F.append(flux.item())
     cs=ax.plot(np.array(range(len(F)))/(73/2),F)
-    ax.set_title('Net flux at TOA', fontsize=10)
     ax.set_xlabel('Time (year)')
     ax.set_ylabel('Flux')
     set_label(fig, ax,'f')
@@ -102,6 +102,8 @@ def plot_function(fig, state):
     fig.suptitle(my_state['time'], fontsize=12)
 
     fig.tight_layout()
+
+    plt.savefig('model_state.pdf', bbox_inches='tight')
 
 
 monitor = PlotFunctionMonitor(plot_function, interactive=True)
@@ -190,7 +192,7 @@ data_common.to_zarr(store=store, mode='w')
 
 
 # Spinup model for a year
-for i in range(2160*6):#26280 one year
+for i in range(26280*3):#26280 one year
 
     if (i+1)%(72*10)==0:
         monitor.store(my_state)
