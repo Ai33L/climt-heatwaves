@@ -19,7 +19,7 @@ Model resolution is T42 (64 x 128), with 28 vertical levels. The timestep of int
 
 The incoming solar flux is set to be highest at 10$\degree$N, with the profile with latitude $\phi$ as $$150\LARGE(\normalsize 1+1.4\LARGE(\normalsize\frac{1-3sin\phi^2}{4}\LARGE)\LARGE) \normalsize W/m^2$$
 
-In this model, we have implemented an idealised land configuration, with land extending from 20$\degree$ to 60$\degree$ in both hemispheres.
+In this model, we have implemented an idealised land configuration, with land extending from 20&deg; to 60&deg; in both hemispheres.
 
 The depth of the land slab is set to 1 m, while the depth of the ocean slab is set to 2 m.
 
