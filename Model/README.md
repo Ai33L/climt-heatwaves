@@ -50,3 +50,12 @@ Model data -
 * surface_downwelling_longwave_flux_in_air
 
 The daily averages of these are saved along the time axis in nested directories in xarray dataset format.
+
+### Model analysis and others
+
+1. The *model_state.pdf* file shows a model state after a 3 year spinup. From the area-averaged net flux at TOA, the model spinup time is around a year.
+
+2. The *init_and_clim.py* script is used to perfom 3 year spinup and then compute the 30 year climatology of the model. The *visualise.py* script can then be used to plot and inspect the model state and climatology.
+
+3. For heatwave analysis, we wish to focus on a region between 30$\degree$N and 50$\degree$N and 20$\degree$ wide. The *create_mask.py* script is used to make a mask that will be used later.
+

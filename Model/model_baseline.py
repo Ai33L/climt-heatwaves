@@ -226,6 +226,7 @@ store = zarr.storage.DirectoryStore("data_baseline/day1")
 (Data.resample(time='1D').mean()).to_zarr(store=store, encoding=enc, mode='w')
 
 # D=xr.open_zarr("data_baseline/day1")
-# plt.contourf(D['surface_upward_sensible_heat_flux'][0])
+# print(D)
+# plt.contourf(D['boundary_layer_height'][0])
 # plt.colorbar()
 # plt.show()

@@ -54,9 +54,10 @@ Model data -
 
 The daily averages of these are saved along the time axis in nested directories in xarray dataset format.
 
-## Direct run
-
 ### Climatology and initialisation
 The model is spun up for 3 years. The model is then run for a period of 30 years, with model states saved every 10 days. 
 
 The 30 year climatology is computed from this run. The model states saved will be used for the GKLT algorithm later.
+
+## Direct run
+
