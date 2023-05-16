@@ -23,7 +23,7 @@ pert_flag=1
 # load state from memory, perturb if pert_flag is true 
 def load_state(state, core, filename):
         
-    with open(filename, 'rb') as f:
+    with gzip.open(filename, 'rb') as f:
         fields, spec = pickle.load(f)
     
     if pert_flag:
@@ -33,23 +33,22 @@ def load_state(state, core, filename):
     core._gfs_cython.reinit_spectral_arrays(spec)    
     state.update(fields)
 
-with gzip.open('mask', 'rb') as f:
+with gzip.open('obs_mask', 'rb') as f:
     obs_mask = pickle.load(f)
 
+# Function to calculate the observable
 def Obs(state):
     lat = np.radians(state['latitude'].values[:])
     O=state['air_temperature'][0].values[:]
     return((O*np.cos(lat)*obs_mask).sum())/((np.cos(lat)*obs_mask).sum())
 
+# Function to simulate a trajectory
 def traj():
-
-    climt.set_constants_from_dict({
-        'stellar_irradiance': {'value': 200, 'units': 'W m^-2'}})
 
     model_time_step = timedelta(minutes=20)
 
     convection = climt.EmanuelConvection()
-    boundary=TimeDifferencingWrapper(climt.SimpleBoundaryLayer(scaling_land=0.5))
+    boundary=TimeDifferencingWrapper(climt.SimpleBoundaryLayer(scaling_land=0.7))
     radiation = climt.GrayLongwaveRadiation()
     slab_surface = climt.SlabSurface()
     optical_depth = climt.Frierson06LongwaveOpticalDepth(linear_optical_depth_parameter=1, longwave_optical_depth_at_equator=6)
@@ -58,12 +57,12 @@ def traj():
         [boundary ,radiation, convection, slab_surface], number_of_damped_levels=5
     )
 
-    grid = climt.get_grid(nx=128, ny=62)
+    grid = climt.get_grid(nx=128, ny=64)
 
     my_state = climt.get_default_state([dycore], grid_state=grid)
     dycore(my_state, model_time_step)
 
-    load_state(my_state, dycore, 'lyapunov_start')
+    load_state(my_state, dycore, 'spinup_3yr')
 
     A=[]
 
@@ -80,18 +79,20 @@ def traj():
 
     return A
 
-# T=[]
-# for k in range(30):
+# Section to run the simulation of trajectories
 
-#     print(k)
+# T=[]
+# num_of_trajs=30
+# for k in range(num_of_trajs):
+
+#     print('Trajectory', k+1)
 #     x=traj()
 #     T.append(x)
 
-# with open('lyapunov_data', 'wb') as f:
+# with gzip.open('lyapunov_data', 'wb') as f:
 #     pickle.dump(T, f)
 
-
-##########################
+# Section to analyse the trajectory data
 
 def diff(m):
     sum=0
@@ -114,12 +115,12 @@ def lyap(A):
     
     return L
 
-with open('lyapunov_data', 'rb') as f:
+with gzip.open('lyapunov_data', 'rb') as f:
     T=pickle.load(f)
 
-# for e in T:
-#     plt.plot(e)
-# plt.show()
+for e in T:
+    plt.plot(np.array(range(len(e)))/(3*24), e)
+plt.show()
 
 ly=lyap(T)
 plt.plot(np.array(range(len(T[0])))/(3*24),ly)
@@ -128,5 +129,5 @@ plt.yscale('log')
 plt.xlabel('Time (days)')
 plt.ylabel('Average distance between runs (K)')
 plt.grid()
-plt.savefig('/home/lab_abel/lyap.pdf', bbox_inches='tight')
-# plt.show()
+plt.savefig('lyapunov.pdf', bbox_inches='tight')
+plt.show()

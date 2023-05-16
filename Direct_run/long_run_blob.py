@@ -117,7 +117,7 @@ for i in range(26280*25):#26280 one year
         compressor = zarr.Blosc(cname="lz4hc", clevel=5, shuffle=True)
         enc = {x: {"compressor": compressor} for x in Data}
 
-        store = zarr.storage.DirectoryStore("long_run/traj"+str(key)+"/year"+str(index)) 
+        store = zarr.storage.DirectoryStore("long_run/run"+str(key)+"/year"+str(index)) 
         (Data.resample(time='1D').mean()).to_zarr(store=store, encoding=enc, mode='w')
         index=index+1
 
