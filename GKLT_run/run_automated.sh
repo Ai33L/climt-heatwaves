@@ -62,6 +62,7 @@ then
 
 qsub submit_traj_ser.sh $1 $c $k > GKTL_log.txt
 #echo $c
+c=$((c+1))
 
 fi
 done

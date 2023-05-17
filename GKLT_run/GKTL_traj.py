@@ -2,13 +2,13 @@ import warnings
 warnings.filterwarnings("ignore")
 
 import climt
-from sympl import (
-    TimeDifferencingWrapper
-)
+from sympl import (TimeDifferencingWrapper)
 import numpy as np
 from datetime import timedelta
 import pickle
 import gzip
+import zarr
+import xarray as xr
 
 
 # get passed arguments
@@ -59,10 +59,6 @@ def save_state(state, core, filename):
 # trajectory simulation
 def Traj():
 
-    # Optional in our model - no component that uses irradiance
-    climt.set_constants_from_dict({
-        'stellar_irradiance': {'value': 200, 'units': 'W m^-2'}})
-
     model_time_step = timedelta(minutes=20)
 
     convection = climt.EmanuelConvection()
@@ -74,41 +70,14 @@ def Traj():
         [boundary ,radiation, convection, slab_surface], number_of_damped_levels=5
     )
 
-    grid = climt.get_grid(nx=128, ny=62)
+    grid = climt.get_grid(nx=128, ny=64)
 
     my_state = climt.get_default_state([dycore], grid_state=grid)
     dycore(my_state, model_time_step)
 
     load_state(my_state, dycore, dir+'/traj'+str(traj_num))
 
-    # setup fields to save
-    
-    # Temp field
-    Air_temp_lowest=[]
-    
-    # 2D fields    
-    Surf_temp=[]
-    Surf_press=[]
-    Down_long=[]
-    Up_long=[]
-    Latent_flux=[]
-    Sensible_flux=[]
-    
-    # 3D fields    
-    Air_temp=[]
-    East_wind=[]
-    North_wind=[]
-    
-    # common save for latitude, longitude and area_type
-
-    Longitude=my_state['longitude'].values[:]
-    Latitude=my_state['latitude'].values[:]
-    Area_type=my_state['area_type']
-
-    with gzip.open(dir+'/common', 'wb') as f:
-            pickle.dump([Longitude, Latitude, Area_type], f)
-
-    with gzip.open('mask', 'rb') as f:
+    with gzip.open('obs_mask', 'rb') as f:
             obs_mask = pickle.load(f)
 
     def Obs(state):
@@ -118,53 +87,64 @@ def Traj():
 
     A=[] # to store observable
 
+    # Function to format climate model output
+    def format_data(state):
+        arr=[]
+        for i in state.keys():
+            if i!='time':
+                if i in ['air_temperature','air_pressure','specific_humidity',
+                'northward_wind','eastward_wind','surface_air_pressure', 'surface_temperature',
+                'surface_upward_latent_heat_flux', 'surface_upward_sensible_heat_flux',
+                'boundary_layer_height', 'divergence_of_wind','upwelling_longwave_flux_in_air',
+                'downwelling_longwave_flux_in_air']:
+                    if i in ['upwelling_longwave_flux_in_air','downwelling_longwave_flux_in_air']:
+                        arr.append(state[i][0].rename('surface_'+i).astype('float32'))    
+                    else:
+                        arr.append(state[i].rename(i).astype('float32'))
+
+        data=xr.merge(arr)
+        data = data.expand_dims(time=[my_state['time']])
+
+        return(data)
+
+    # store common data
+    arr_common=[]
+    for i in ['longitude','latitude','area_type']:
+        arr_common.append(my_state[i].rename(i))
+    store = zarr.storage.DirectoryStore(dir+'/common')
+    data_common=xr.merge(arr_common) 
+    #data_common.to_zarr(store=store, mode='w')
+
+    data_flag=0
     for i in range(72*tau):#26280 one year
+
+        A.append(Obs(my_state))
 
         if i==1:
             dycore.set_flag(True)
 
+        if (i+1)%18==0:
+            if data_flag==0:
+                Data=format_data(my_state)
+                data_flag=1
+            else:
+                Data=xr.combine_by_coords([Data,format_data(my_state)])
+        
+        if (i+1)%(72*tau)==0:
+            compressor = zarr.Blosc(cname="lz4hc", clevel=5, shuffle=True)
+            enc = {x: {"compressor": compressor} for x in Data}
+
+            store = zarr.storage.DirectoryStore(dir+'/data_'+str(iter)+'_'+str(traj_num)) 
+            (Data.resample(time='1D').mean()).to_zarr(store=store, encoding=enc, mode='w')
+
+            save_state(my_state, dycore, dir+'/traj_new'+str(traj_num))
+
+            with gzip.open(dir+'/A'+str(traj_num), 'wb') as f:
+                pickle.dump(A, f)
+
         diag, my_state = dycore(my_state, model_time_step)
         my_state.update(diag)
         my_state['time'] += model_time_step
-
-        A.append(Obs(my_state))
-
-        #saving temp field
-        if (i+1)%3==0:
-            Air_temp_lowest.append(np.around(my_state['air_temperature'].values[0], 2))
-
-        #saving 2D fields
-        if (i+1)%18==0:
-            Surf_temp.append(np.around(my_state['surface_temperature'].values[0],2))
-            Surf_press.append(np.around(my_state['surface_air_pressure'].values[0],2))
-            Down_long.append(np.around(my_state['downwelling_longwave_flux_in_air'].values[0],2))
-            Up_long.append(np.around(my_state['upwelling_longwave_flux_in_air'].values[0],2))
-            Latent_flux.append(np.around(my_state['surface_upward_latent_heat_flux'].values[:],2))
-            Sensible_flux.append(np.around(my_state['surface_upward_sensible_heat_flux'].values[:],2))
-
-        #saving 3D fields
-        if (i+1)%72==0:
-            Air_temp.append(np.around(my_state['air_temperature'].values[:20], 2))
-            East_wind.append(np.around(my_state['eastward_wind'].values[:20],3))
-            North_wind.append(np.around(my_state['northward_wind'].values[:20],3))
-
-        # write to file at end of trajectory simulation
-        # if (i+1)%(72*8)==0:
-            
-        #     with gzip.open(dir+'/A'+str(traj_num), 'wb') as f:
-        #         pickle.dump(A, f)
-
-        #     with gzip.open(dir+'/data_temp_'+str(iter)+'_'+str(traj_num), 'wb') as f:
-        #         pickle.dump(Air_temp_lowest, f)
-
-        #     with gzip.open(dir+'/data2D_'+str(iter)+'_'+str(traj_num), 'wb') as f:
-        #         pickle.dump([Surf_temp, Surf_press, Down_long, Up_long, Latent_flux,
-        #         Sensible_flux], f)
-            
-        #     with gzip.open(dir+'/data3D_'+str(iter)+'_'+str(traj_num), 'wb') as f:
-        #         pickle.dump([Air_temp, East_wind, North_wind], f)
-
-            save_state(my_state, dycore, dir+'/traj_new'+str(traj_num))
 
 Traj()
 

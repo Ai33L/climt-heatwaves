@@ -4,6 +4,7 @@ import numpy as np
 import random
 import shutil
 import os
+import zarr
 
 
 # get passed arguments
@@ -101,20 +102,18 @@ for e in link_delete:
     flag=0
     for i in range(len(e)):
         if flag==1:
-            if os.path.exists(dir+'/data_temp_'+e[i]):
-                os.remove(dir+'/data_temp_'+e[i])
-                os.remove(dir+'/data2D_'+e[i])
-                os.remove(dir+'/data3D_'+e[i])
+            if os.path.exists(dir+'/data_'+e[i]):
+                store = zarr.storage.DirectoryStore(dir+'/data_'+e[i])
+                zarr.storage.rmdir(store=store)
         else:
             check=0
             for f in link_new:
                 if f[i]==e[i]:
                     check=1
             if check==0:
-                if os.path.exists(dir+'/data_temp_'+e[i]):
-                    os.remove(dir+'/data_temp_'+e[i])
-                    os.remove(dir+'/data2D_'+e[i])
-                    os.remove(dir+'/data3D_'+e[i])
+                if os.path.exists(dir+'/data_'+e[i]):
+                    store = zarr.storage.DirectoryStore(dir+'/data_'+e[i])
+                    zarr.storage.rmdir(store=store)
                 flag=1
 
 
